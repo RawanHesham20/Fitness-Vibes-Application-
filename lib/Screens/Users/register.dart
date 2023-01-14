@@ -18,12 +18,26 @@ class _MyRegisterState extends State<Register> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
-  void signIn() async {
-    FirebaseAuthMethods(FirebaseAuth.instance).signupwithEmail(
+  
+  Future signUp(Users userx) async {
+    try {
+      UserCredential authusers =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: emailController.text,
         password: passwordController.text,
-        context: context);
+      );
+      User? userabc = authusers.user;
+      final db =
+          FirebaseFirestore.instance.collection("users").doc(userabc?.uid);
+      userx.role = "User";
+      userx.id = userabc!.uid;
+      final json = userx.toJson();
+      await db.set(json);
+    } on FirebaseAuthException catch (e) {
+      print(e);
+    }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -69,7 +83,7 @@ class _MyRegisterState extends State<Register> {
                               decoration: InputDecoration(
                                   fillColor: Colors.grey.shade100,
                                   filled: true,
-                                  hintText: "Name",
+                                  hintText: "Full Name",
                                   enabledBorder: OutlineInputBorder(
                                     borderSide: const BorderSide(
                                         color: Colors.purple, width: 3.0),
@@ -77,7 +91,10 @@ class _MyRegisterState extends State<Register> {
                                   )),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
-                                  return 'Please enter your Name';
+                                  return 'Please enter your Full Name';
+                                }
+                                else if (value.length < 7) {
+                                  return 'Enter at least 7 characters';
                                 }
                                 return null;
                               },
@@ -101,6 +118,10 @@ class _MyRegisterState extends State<Register> {
                                 if (value == null || value.isEmpty) {
                                   return 'Please enter your Mobile Number';
                                 }
+                                else if (!RegExp(r'^01[0125][0-9]{8}$')
+                                    .hasMatch(value)) {
+                                  return ('please enter a valid mobile number that contains only 11 numbers ');
+                                }
                                 return null;
                               },
                             ),
@@ -123,7 +144,13 @@ class _MyRegisterState extends State<Register> {
                                 if (value == null || value.isEmpty) {
                                   return 'Please enter your Email';
                                 }
-                                return null;
+                               else if (!RegExp(
+                                        "^[a-zA-Z0-9+_.-]+@[a-zA-Z0-9.-]+.[a-z]")
+                                    .hasMatch(value)) {
+                                  return ('please enter a valid email');
+                                } else {
+                                  return null;
+                                }
                               },
                             ),
                             const SizedBox(
@@ -145,6 +172,9 @@ class _MyRegisterState extends State<Register> {
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
                                   return 'Please enter your Password';
+                                }
+                                else if (value.length < 7) {
+                                  return 'Password must be at least 7 characters long';
                                 }
                                 return null;
                               },
@@ -168,23 +198,14 @@ class _MyRegisterState extends State<Register> {
                                   child: IconButton(
                                       color: Colors.white,
                                       onPressed: () {
-                                        final String newName =
-                                            nameController.text;
-                                        final String newMobile =
-                                            mobileController.text;
-                                        final String newEmail =
-                                            emailController.text;
-                                        final String newPass =
-                                            passwordController.text;
-                                      
-                                        createUser(
-                                            name: newName,
-                                            mobile: newMobile,
-                                            email: newEmail,
-                                            pass: newPass);
-                                        signIn();
-                                        final form = Thekey.currentState;
-                                        if (form!.validate()) {
+                                        final usery = Users(
+                                          name: nameController.text.trim(),
+                                          mobile: mobileController.text.trim(),
+                                          email: emailController.text.trim(),
+                                        );
+                                        if (Thekey.currentState!.validate()) {
+                                          Thekey.currentState!.save();
+                                          signUp(usery);
                                           GoRouter.of(context).go('/login');
                                         }
                                       },
